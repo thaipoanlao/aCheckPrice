@@ -3,18 +3,15 @@
 import { useState, useEffect } from 'react'
 
 export default function CheckPricePage() {
-  // 1. แยกชื่อสินค้าเป็น State กลาง และข้อมูลราคาแยกฝั่ง A/B
   const [productName, setProductName] = useState('')
   const [productA, setProductA] = useState({ price: '', qty: '', unit: 'g' })
   const [productB, setProductB] = useState({ price: '', qty: '', unit: 'g' })
   const [history, setHistory] = useState<any[]>([])
 
-  // ตัวคูณสำหรับแปลงหน่วยเป็นหน่วยฐาน (1g หรือ 1ml)
   const unitMultipliers: { [key: string]: number } = {
     g: 1, kg: 1000, ml: 1, l: 1000, piece: 1,
   }
 
-  // ฟังก์ชันคำนวณราคาต่อ 1 หน่วย
   const calculateUnitPrice = (price: string, qty: string, unit: string) => {
     const p = parseFloat(price); const q = parseFloat(qty)
     const multiplier = unitMultipliers[unit] || 1
@@ -25,17 +22,14 @@ export default function CheckPricePage() {
   const unitPriceA = calculateUnitPrice(productA.price, productA.qty, productA.unit)
   const unitPriceB = calculateUnitPrice(productB.price, productB.qty, productB.unit)
 
-  // ตรวจสอบฝั่งที่คุ้มค่ากว่า
   const isAWinner = unitPriceA > 0 && (unitPriceB === 0 || unitPriceA < unitPriceB)
   const isBWinner = unitPriceB > 0 && (unitPriceA === 0 || unitPriceB < unitPriceA)
 
-  // ฟอร์แมตราคาเพื่อแสดงผลต่อ 1kg/1L
   const formatDisplayPrice = (unitPrice: number) => {
     if (unitPrice === 0) return '0.00'
     return (unitPrice * 1000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
 
-  // ดึงประวัติจาก Database
   const fetchHistory = async () => {
     try {
       const response = await fetch('/api/history')
@@ -48,11 +42,9 @@ export default function CheckPricePage() {
 
   useEffect(() => { fetchHistory() }, [])
 
-  // ฟังก์ชันบันทึกข้อมูล
   const handleSave = async (side: 'A' | 'B') => {
     const data = side === 'A' ? productA : productB
     const unitPrice = side === 'A' ? unitPriceA : unitPriceB
-    
     if (!data.price || !data.qty) return alert('กรุณากรอกข้อมูลให้ครบ')
 
     try {
@@ -71,7 +63,6 @@ export default function CheckPricePage() {
     } catch (error) { alert('บันทึกล้มเหลว') }
   }
 
-  // ฟังก์ชันลบรายการประวัติ
   const handleDelete = async (id: number) => {
     if (!confirm('ยืนยันว่าจะลบรายการนี้ใช่ไหม?')) return
     try {
@@ -91,7 +82,6 @@ export default function CheckPricePage() {
         <p className="text-slate-400 text-[10px] font-bold uppercase mt-1 tracking-widest">Smart Shopping Assistant</p>
       </header>
 
-      {/* ช่องกรอกชื่อสินค้าส่วนกลาง */}
       <div className="bg-white p-4 rounded-3xl shadow-sm border border-blue-100">
         <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-2 px-2">ชื่อสินค้าที่กำลังเทียบ</label>
         <input 
@@ -103,7 +93,6 @@ export default function CheckPricePage() {
         />
       </div>
       
-      {/* ส่วนเปรียบเทียบแบบ 2 Column */}
       <div className="grid grid-cols-2 gap-4">
         {/* Card แบบ A */}
         <div className={`p-4 rounded-[2.5rem] shadow-lg border-4 transition-all duration-300 ${isAWinner ? 'border-green-500 bg-white scale-105 z-10' : 'border-transparent bg-white/60'}`}>
@@ -162,28 +151,33 @@ export default function CheckPricePage() {
         </p>
       </div>
 
-      {/* ประวัติการบันทึกจาก Database */}
+      {/* ส่วนประวัติล่าสุดที่ปรับปรุงแล้ว */}
       <section className="space-y-3 pt-2">
-        <h3 className="text-lg font-black text-slate-800 px-2 flex items-center gap-2">🕒 ประวัติล่าสุด</h3>
+        <h3 className="text-lg font-black text-slate-800 px-2 flex items-center gap-2 text-center justify-center">🕒 ประวัติล่าสุด</h3>
         <div className="space-y-2">
           {history.length > 0 ? (
             history.map((item) => (
-              <div key={item.id} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex justify-between items-center group animate-fadeIn">
+              <div key={item.id} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex justify-between items-center group">
                 <div className="flex-1">
                   <p className="font-black text-slate-800 text-xs truncate max-w-[150px]">{item.product_name}</p>
-                  <p className="text-[9px] text-slate-400">{item.price}฿ / {item.quantity}{item.unit}</p>
+                  {/* แสดงปริมาณสินค้าที่ซื้อ */}
+                  <p className="text-[9px] text-slate-400 font-bold uppercase">ปริมาณ: {item.quantity}{item.unit}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="text-xs font-black text-blue-600">฿{(item.unit_price * 1000).toFixed(2)}</p>
-                    <p className="text-[7px] text-slate-300 font-bold uppercase">/ KG,L</p>
+                    {/* ราคาซื้อจริง (สีน้ำเงิน ตัวหนา) */}
+                    <p className="text-sm font-black text-blue-600">฿{parseFloat(item.price).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                    {/* ราคาต่อหน่วย (สีเทา ตัวเล็ก) */}
+                    <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">
+                      ฿{(item.unit_price * 1000).toLocaleString(undefined, {maximumFractionDigits: 2})} / KG,L
+                    </p>
                   </div>
-                  <button onClick={() => handleDelete(item.id)} className="p-2 text-red-100 hover:text-red-500 transition-colors">🗑️</button>
+                  <button onClick={() => handleDelete(item.id)} className="p-2 text-red-200 hover:text-red-500 transition-colors">🗑️</button>
                 </div>
               </div>
             ))
           ) : (
-            <div className="text-center py-8 bg-slate-200/20 rounded-[2rem] border-2 border-dashed border-slate-200 text-slate-400 text-[10px] font-bold">ยังไม่พบประวัติ</div>
+            <div className="text-center py-8 bg-slate-200/20 rounded-[2rem] border-2 border-dashed border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-widest">ยังไม่พบประวัติ</div>
           )}
         </div>
       </section>
